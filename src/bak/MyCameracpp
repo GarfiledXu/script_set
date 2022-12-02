@@ -1,0 +1,778 @@
+#include "MyCamera.hpp"
+
+int camera_check_running = 0;
+static qcarcam_test_input_t gDmsInput = {};
+static qcarcam_test_input_t gOmsInput = {};
+
+extern bool g_bSendOms;
+extern bool g_bSendDms;
+extern int  g_do_dms;
+// extern std::deque<SendData> g_dqSendData;
+extern pthread_mutex_t g_FrameBuffer_lock;
+extern pthread_cond_t cond_do_dms;
+static int s_nFrameNum = 0;
+int qcarcam_init()
+ {
+	qcarcam_ret_t ret = QCARCAM_RET_OK;
+	qcarcam_init_t qcarcam_init = { 0 };
+	qcarcam_init.version = QCARCAM_VERSION;
+	ret = qcarcam_initialize(&qcarcam_init);
+	if (ret != QCARCAM_RET_OK)
+	{
+		printf("qcarcam_initialize failed %d\n", ret);
+		return -1;
+	}
+
+	printf("qcarcam_initialize ok\n");
+	return 0;
+}
+
+int qcarcam_uninit() 
+{
+	qcarcam_ret_t ret = QCARCAM_RET_OK;
+	ret = qcarcam_uninitialize();
+	if (ret != QCARCAM_RET_OK)
+	{
+		printf("qcarcam_uninitialize failed %d\n", ret);
+		return -1;
+	}
+
+	return 0;
+}
+
+/**
+ * Function to handle routine of fetching, displaying, and releasing frames when one is available
+ * @param input_ctxt
+ * @return 0 on success, -1 on failure
+ */
+static int qcarcam_arcsoft_handle_dms_frame(qcarcam_test_input_t *pInputCtxt)
+{
+	qcarcam_ret_t ret;
+	qcarcam_frame_info_t frame_info;
+
+	ret = qcarcam_get_frame(pInputCtxt->qcarcam_context, &frame_info, pInputCtxt->frame_timeout, 0);
+
+	if (QCARCAM_RET_OK != ret)
+	{
+		printf("Get frame context 0x%p error ret %d (QCARCAM_RET_TIMEOUT %d)\n", pInputCtxt->qcarcam_context, ret, QCARCAM_RET_TIMEOUT);
+		return -1;
+	}
+
+	if (frame_info.idx >= (int)pInputCtxt->buffers_param.n_buffers)
+	{
+		printf("Get frame context 0x%p ret invalid idx %d\n", pInputCtxt->qcarcam_context, frame_info.idx);
+		return -1;
+	}
+
+#if 0
+	//process the frame ...
+	printf("DMS pInputCtxt -> frameCnt %d; qcarcam size %d, stride %d w %d h %d\n",pInputCtxt -> frameCnt,
+				pInputCtxt->p_buffers_output.buffers[frame_info.idx].planes[0].size,
+				pInputCtxt->p_buffers_output.buffers[frame_info.idx].planes[0].stride, pInputCtxt->buffers_param.width,
+				pInputCtxt->buffers_param.height);
+
+	s_nFrameNum++;
+	char s[40];
+	sprintf(s, "DMS_%d_%dx%d.uyvy", s_nFrameNum, DMS_CAMERA_WIDTH, DMS_CAMERA_HEIGHT);
+	FILE *file = fopen(s, "wb+");
+
+	if (file != NULL)
+	{
+		fwrite(pInputCtxt->p_buffers_output.buffers[frame_info.idx].planes[0].p_buf,
+			   pInputCtxt->p_buffers_output.buffers[frame_info.idx].planes[0].size, 1, file);
+		fclose(file);
+
+#endif
+
+#if 0
+
+	SendData stSendData;
+	//stSendData.nCarType = 1;
+	stSendData.nCarCamId = pInputCtxt->qcarcam_input_id;
+	stSendData.nImgWidth = pInputCtxt->buffers_param.width;
+	stSendData.nImgHeight = pInputCtxt->buffers_param.height;
+	stSendData.nImgDataSize = pInputCtxt->buffers_param.width * pInputCtxt->buffers_param.height * 3;
+	stSendData.pBufferData = (uint8_t*)(pInputCtxt->p_buffers_output.buffers[frame_info.idx].planes[0].p_buf);
+	stSendData.lPackSize = sizeof(stSendData) + stSendData.nImgDataSize;
+
+	PutDmsData(stSendData);
+
+#endif
+#if 1
+    pthread_mutex_lock(&mtx_camera_pushdata_dms);
+    memcpy(G_CameraImgBuff_Dms, (MUInt8 *)(pInputCtxt->p_buffers_output.buffers[frame_info.idx].planes[0].p_buf), sizeof(char)*DMS_BUFF_LENGTH);
+    pthread_mutex_unlock(&mtx_camera_pushdata_dms);
+#endif
+	pInputCtxt -> frameCnt ++;
+	//printf("dms frame idx...%d \n", pInputCtxt -> frameCnt);
+	//release the frame
+	ret = qcarcam_release_frame(pInputCtxt->qcarcam_context, frame_info.idx);
+	if (QCARCAM_RET_OK != ret)
+	{
+		printf("qcarcam_release_frame(%d) failed", frame_info.idx);
+		return -1;
+	}
+    return 0;
+}
+
+/**
+ * Function to handle routine of fetching, displaying, and releasing frames when one is available
+ * @param input_ctxt
+ * @return 0 on success, -1 on failure
+ */
+static int qcarcam_arcsoft_handle_oms_frame(qcarcam_test_input_t *pInputCtxt)
+{
+	qcarcam_ret_t ret;
+	qcarcam_frame_info_t frame_info;
+
+	ret = qcarcam_get_frame(pInputCtxt->qcarcam_context, &frame_info, pInputCtxt->frame_timeout, 0);
+
+	if (QCARCAM_RET_OK != ret)
+	{
+		printf("Get frame context 0x%p error ret %d (QCARCAM_RET_TIMEOUT %d)\n", pInputCtxt->qcarcam_context, ret, QCARCAM_RET_TIMEOUT);
+		return -1;
+	}
+
+	if (frame_info.idx >= (int)pInputCtxt->buffers_param.n_buffers)
+	{
+		printf("Get frame context 0x%p ret invalid idx %d\n", pInputCtxt->qcarcam_context, frame_info.idx);
+		return -1;
+	}
+
+#if 0
+	//process the frame ...
+	printf("DMS pInputCtxt -> frameCnt %d; qcarcam size %d, stride %d w %d h %d\n",pInputCtxt -> frameCnt,
+				pInputCtxt->p_buffers_output.buffers[frame_info.idx].planes[0].size,
+				pInputCtxt->p_buffers_output.buffers[frame_info.idx].planes[0].stride, pInputCtxt->buffers_param.width,
+				pInputCtxt->buffers_param.height);
+
+	s_nFrameNum++;
+	char s[40];
+	sprintf(s, "OMS_%d_%dx%d.uyvy", s_nFrameNum, OMS_CAMERA_WIDTH, OMS_CAMERA_HEIGHT);
+	FILE *file = fopen(s, "wb+");
+
+	if (file != NULL)
+	{
+		fwrite(pInputCtxt->p_buffers_output.buffers[frame_info.idx].planes[0].p_buf,
+			   pInputCtxt->p_buffers_output.buffers[frame_info.idx].planes[0].size, 1, file);
+		fclose(file);
+	}
+
+#endif
+
+#if 0
+	// ASVLOFFSCREEN sImage = { 0 };
+	// sImage.i32Width = DMS_CAMERA_WIDTH;
+	// sImage.i32Height = DMS_CAMERA_HEIGHT;
+	// sImage.u32PixelArrayFormat = ASVL_PAF_UYVY;
+	// sImage.pi32Pitch[0] = sImage.i32Width*2;
+	// sImage.ppu8Plane[0] = (MUInt8 *)(pInputCtxt->p_buffers_output.buffers[frame_info.idx].planes[0].p_buf);
+	// sImage.ppu8Plane[1] = MNull;
+
+	SendData stSendData;
+	//stSendData.nCarType = 0;
+	stSendData.nCarCamId = pInputCtxt->qcarcam_input_id;
+	stSendData.nImgWidth = pInputCtxt->buffers_param.width;
+	stSendData.nImgHeight = pInputCtxt->buffers_param.height;
+	stSendData.nImgDataSize = pInputCtxt->buffers_param.width * pInputCtxt->buffers_param.height;
+	stSendData.pBufferData = (MUInt8 *)(pInputCtxt->p_buffers_output.buffers[frame_info.idx].planes[0].p_buf);
+
+	PutDmsData(stSendData);
+
+#endif
+#if 1
+    pthread_mutex_lock(&mtx_camera_pushdata_oms);
+    memcpy(G_CameraImgBuff_Oms, (MUInt8 *)(pInputCtxt->p_buffers_output.buffers[frame_info.idx].planes[0].p_buf), sizeof(char)*OMS_BUFF_LENGTH);
+    pthread_mutex_unlock(&mtx_camera_pushdata_oms);
+#endif
+	pInputCtxt->frameCnt++;
+	//printf("dms frame idx...%d \n", pInputCtxt->frameCnt);
+	// release the frame
+	ret = qcarcam_release_frame(pInputCtxt->qcarcam_context, frame_info.idx);
+	if (QCARCAM_RET_OK != ret)
+	{
+		printf("qcarcam_release_frame(%d) failed", frame_info.idx);
+		return -1;
+	}
+	return 0;
+}
+
+/**
+ * Qcarcam event callback function
+ * @param hndl
+ * @param event_id
+ * @param p_payload
+ */
+static void qcarcam_arcsoft_event_dms_cb(qcarcam_hndl_t hndl, qcarcam_event_t event_id, qcarcam_event_payload_t *p_payload)
+{
+	//printf("event dms call back");
+
+	int ret;
+    qcarcam_test_input_t *pInputCtxt = &gDmsInput;
+    if (hndl != gDmsInput.qcarcam_context) 
+	{
+    	printf ("ERROR: hndl != gDMSCamera.qcarcam_context\b");
+    	return;
+    }
+	if (QCARCAM_EVENT_FRAME_READY != event_id)
+		printf ("dms event_id  %d\n ", event_id);
+
+    switch (event_id)
+    {
+    case QCARCAM_EVENT_FRAME_READY:
+        if (pInputCtxt->is_running)
+        {
+        	pInputCtxt->state = 0;
+        	//printf("received QCARCAM_EVENT_FRAME_READY\n");
+            qcarcam_arcsoft_handle_dms_frame(pInputCtxt);
+        }
+        break;
+    case QCARCAM_EVENT_ERROR:
+        if (p_payload->uint_payload == QCARCAM_CONN_ERROR)
+        {
+            printf("ERROR: Connetion to server lost QCARCAM_CONN_ERROR\n");
+
+        } else if (p_payload->uint_payload == QCARCAM_IFE_WR_BUS_ERROR) {
+        	printf("ERROR: Connetion to server lost QCARCAM_IFE_WR_BUS_ERROR\n");
+
+        } else if (p_payload->uint_payload == QCARCAM_FATAL_ERROR) {
+        	printf("ERROR: Connetion to server lost QCARCAM_FATAL_ERROR\n");
+
+        } else if (p_payload->uint_payload == QCARCAM_IFE_OVERFLOW_ERROR) {
+
+        	printf("ERROR: Connetion to server lost QCARCAM_IFE_OVERFLOW_ERROR\n");
+
+        } else if (p_payload->uint_payload == QCARCAM_FRAMESYNC_ERROR) {
+        	printf("ERROR: Connetion to server lost QCARCAM_FRAMESYNC_ERROR\n");
+        }
+
+        break;
+
+    case QCARCAM_EVENT_INPUT_SIGNAL:
+
+    	if (p_payload->uint_payload == QCARCAM_INPUT_SIGNAL_LOST) 
+		{
+
+			   printf("LOST:  input: %d \n", pInputCtxt->qcarcam_input_id);
+
+			   pthread_mutex_lock(&pInputCtxt->mutex_close_camera);
+			   if (pInputCtxt->state == 1) { //signal lost, stop the camera
+				   printf("Input %d already stop, break \n", pInputCtxt->qcarcam_input_id);
+				   pthread_mutex_unlock(&pInputCtxt->mutex_close_camera);
+				   break;
+			   }
+
+			   //input_ctxt->signal_lost = 1;
+			   ret = qcarcam_stop(hndl);
+			   if (ret == 0) {
+				   pInputCtxt->state = 1;
+				   printf("qcarcam_stop OK:  input: %d\n", pInputCtxt->qcarcam_input_id);
+			   } else {
+				   printf("qcarcam_stop fail:  input: %d, return %d\n", pInputCtxt->qcarcam_input_id, ret);
+			   }
+
+			   pthread_mutex_unlock(&pInputCtxt->mutex_close_camera);
+
+    	} 
+		else if (p_payload->uint_payload == QCARCAM_INPUT_SIGNAL_VALID) 
+		{
+
+			   printf("VALID:  input: %d\n", pInputCtxt->qcarcam_input_id);
+
+			   pthread_mutex_lock(&pInputCtxt->mutex_close_camera);
+			   if (pInputCtxt->state == 2)
+			   {
+				   printf("Input %d already running, break\n", pInputCtxt->qcarcam_input_id);
+				   pthread_mutex_unlock(&pInputCtxt->mutex_close_camera);
+				   break;
+			   }
+
+			   ret = qcarcam_start(hndl);
+			   if (ret == 0) {
+				   printf("qcarcam_start OK:  input: %d\n", pInputCtxt->qcarcam_input_id);
+				   pInputCtxt->state = 2;
+			   } else {
+				   printf("qcarcam_start fail:  input: %d, return %d\n", pInputCtxt->qcarcam_input_id, ret);
+			   }
+
+			   pthread_mutex_unlock(&pInputCtxt->mutex_close_camera);
+    	}
+    	break;
+
+    default:
+        printf("ERROR: Received unsupported event %d\n", event_id);
+        break;
+    }
+}
+
+/**
+ * Qcarcam event callback function
+ * @param hndl
+ * @param event_id
+ * @param p_payload
+ */
+static void qcarcam_arcsoft_event_oms_cb(qcarcam_hndl_t hndl, qcarcam_event_t event_id, qcarcam_event_payload_t *p_payload)
+{
+	//printf("event oms call back\n");
+
+	int ret;
+	qcarcam_test_input_t *pInputCtxt = &gOmsInput;
+	if (hndl != gOmsInput.qcarcam_context)
+	{
+		printf("ERROR: hndl != gOMSCamera.qcarcam_context\b");
+		return;
+	}
+	if (QCARCAM_EVENT_FRAME_READY != event_id)
+		printf("oms event_id  %d\n ", event_id);
+
+	switch (event_id)
+	{
+	case QCARCAM_EVENT_FRAME_READY:
+		if (pInputCtxt->is_running)
+		{
+			pInputCtxt->state = 0;
+			//printf("received QCARCAM_EVENT_FRAME_READY\n");
+			qcarcam_arcsoft_handle_oms_frame(pInputCtxt);
+		}
+		break;
+	case QCARCAM_EVENT_ERROR:
+		if (p_payload->uint_payload == QCARCAM_CONN_ERROR)
+		{
+			printf("ERROR: Connetion to server lost QCARCAM_CONN_ERROR\n");
+		}
+		else if (p_payload->uint_payload == QCARCAM_IFE_WR_BUS_ERROR)
+		{
+			printf("ERROR: Connetion to server lost QCARCAM_IFE_WR_BUS_ERROR\n");
+		}
+		else if (p_payload->uint_payload == QCARCAM_FATAL_ERROR)
+		{
+			printf("ERROR: Connetion to server lost QCARCAM_FATAL_ERROR\n");
+		}
+		else if (p_payload->uint_payload == QCARCAM_IFE_OVERFLOW_ERROR)
+		{
+			printf("ERROR: Connetion to server lost QCARCAM_IFE_OVERFLOW_ERROR\n");
+		}
+		else if (p_payload->uint_payload == QCARCAM_FRAMESYNC_ERROR)
+		{
+			printf("ERROR: Connetion to server lost QCARCAM_FRAMESYNC_ERROR\n");
+		}
+
+		break;
+
+	case QCARCAM_EVENT_INPUT_SIGNAL:
+
+		if (p_payload->uint_payload == QCARCAM_INPUT_SIGNAL_LOST)
+		{
+
+			printf("LOST:  input: %d \n", pInputCtxt->qcarcam_input_id);
+
+			pthread_mutex_lock(&pInputCtxt->mutex_close_camera);
+			if (pInputCtxt->state == 1)
+			{ // signal lost, stop the camera
+				printf("Input %d already stop, break \n", pInputCtxt->qcarcam_input_id);
+				pthread_mutex_unlock(&pInputCtxt->mutex_close_camera);
+				break;
+			}
+
+			// input_ctxt->signal_lost = 1;
+			ret = qcarcam_stop(hndl);
+			if (ret == 0)
+			{
+				pInputCtxt->state = 1;
+				printf("qcarcam_stop OK:  input: %d\n", pInputCtxt->qcarcam_input_id);
+			}
+			else
+			{
+				printf("qcarcam_stop fail:  input: %d, return %d\n", pInputCtxt->qcarcam_input_id, ret);
+			}
+
+			pthread_mutex_unlock(&pInputCtxt->mutex_close_camera);
+		}
+		else if (p_payload->uint_payload == QCARCAM_INPUT_SIGNAL_VALID)
+		{
+
+			printf("VALID:  input: %d\n", pInputCtxt->qcarcam_input_id);
+
+			pthread_mutex_lock(&pInputCtxt->mutex_close_camera);
+			if (pInputCtxt->state == 2)
+			{
+				printf("Input %d already running, break\n", pInputCtxt->qcarcam_input_id);
+				pthread_mutex_unlock(&pInputCtxt->mutex_close_camera);
+				break;
+			}
+
+			ret = qcarcam_start(hndl);
+			if (ret == 0)
+			{
+				printf("qcarcam_start OK:  input: %d\n", pInputCtxt->qcarcam_input_id);
+				pInputCtxt->state = 2;
+			}
+			else
+			{
+				printf("qcarcam_start fail:  input: %d, return %d\n", pInputCtxt->qcarcam_input_id, ret);
+			}
+
+			pthread_mutex_unlock(&pInputCtxt->mutex_close_camera);
+		}
+		break;
+
+	default:
+		printf("ERROR: Received unsupported event %d\n", event_id);
+		break;
+	}
+}
+
+void stop_dms_capture()
+{
+	gDmsInput.is_running = 0;
+}
+
+void stop_oms_capture()
+{
+	gOmsInput.is_running = 0;
+}
+
+void* start_dms_capture(void* pArg)
+{
+	printf("start dms Capure \n");
+
+	int count = 0;
+	qcarcam_ret_t ret = QCARCAM_RET_OK;
+	qcarcam_test_input_t* pInputCtxt = &gDmsInput;
+
+	pInputCtxt->qcarcam_input_id = DMS_CAMERA_ID;
+	pInputCtxt->use_event_callback = 1;
+	pInputCtxt->state = 0;
+	pthread_mutex_init(&pInputCtxt->mutex_close_camera, NULL);
+
+	/*no timeout when using event callback as frame is ready as soon as we get callback*/
+	pInputCtxt->frame_timeout = pInputCtxt->use_event_callback ? 0 : QCARCAM_TEST_DEFAULT_GET_FRAME_TIMEOUT;
+
+	pInputCtxt->buffers_param.width = DMS_CAMERA_WIDTH;
+	pInputCtxt->buffers_param.height = DMS_CAMERA_HEIGHT;
+	pInputCtxt->buffers_param.format = DMS_CAMERA_FORMAT;
+	pInputCtxt->buffers_param.n_buffers = CAMERA_NUM_BUFFERS;
+
+	pInputCtxt->p_buffers_output.n_buffers = pInputCtxt->buffers_param.n_buffers;
+	pInputCtxt->p_buffers_output.color_fmt = pInputCtxt->buffers_param.format;
+	pInputCtxt->p_buffers_output.buffers = pInputCtxt->pBuffers;
+	for (unsigned int i = 0; i < pInputCtxt->p_buffers_output.n_buffers; ++i)
+	{
+		pInputCtxt->p_buffers_output.buffers[i].n_planes = 1;
+		pInputCtxt->p_buffers_output.buffers[i].planes[0].width = pInputCtxt->buffers_param.width;
+		pInputCtxt->p_buffers_output.buffers[i].planes[0].height = pInputCtxt->buffers_param.height;
+		pInputCtxt->p_buffers_output.buffers[i].planes[0].stride = pInputCtxt->buffers_param.width * 2;
+		pInputCtxt->p_buffers_output.buffers[i].planes[0].size =
+				pInputCtxt->p_buffers_output.buffers[i].planes[0].stride * pInputCtxt->p_buffers_output.buffers[i].planes[0].height;
+		pInputCtxt->p_buffers_output.buffers[i].planes[0].p_buf = pmem_malloc_ext(
+				 pInputCtxt->p_buffers_output.buffers[i].planes[0].size,
+				 PMEM_CAMERA_ID,
+				 PMEM_FLAGS_PHYS_NON_CONTIG,
+				 PMEM_ALIGNMENT_4K);
+		printf("mem: %p \n" ,pInputCtxt->p_buffers_output.buffers[i].planes[0].p_buf);
+	}
+
+	do
+	{  
+		printf("qcarcam_open id %d \n", pInputCtxt->qcarcam_input_id);
+	  	pInputCtxt->qcarcam_context = qcarcam_open(pInputCtxt->qcarcam_input_id);
+		if (!pInputCtxt->qcarcam_context)
+		{
+			if (count++ == 10)
+			{
+				printf("qcarcam_open() failed");
+				 goto qcarcam_thread_fail;
+			}
+			printf("qcarcam_open() try again... \n");
+			//sleep(1);
+		}
+	} while(!pInputCtxt->qcarcam_context);
+
+	printf("qcarcam_open ok ; input_desc=%d context=%p\n", pInputCtxt->qcarcam_input_id, pInputCtxt->qcarcam_context);
+	//
+
+	//use event call back
+	qcarcam_param_value_t param;
+	param.ptr_value = (void *)qcarcam_arcsoft_event_dms_cb;
+	ret = qcarcam_s_param(pInputCtxt->qcarcam_context, QCARCAM_PARAM_EVENT_CB, &param);
+
+	param.uint_value = QCARCAM_EVENT_FRAME_READY | QCARCAM_EVENT_INPUT_SIGNAL | QCARCAM_EVENT_ERROR;
+	ret = qcarcam_s_param(pInputCtxt->qcarcam_context, QCARCAM_PARAM_EVENT_MASK, &param);
+
+	ret = qcarcam_s_buffers(pInputCtxt->qcarcam_context, &pInputCtxt->p_buffers_output);
+	if (ret != QCARCAM_RET_OK)
+	{
+		printf("qcarcam_s_buffers() failed %d\n", ret);
+		goto qcarcam_thread_fail;
+	}
+
+	pInputCtxt->is_running = 1;
+
+	ret = qcarcam_start(pInputCtxt->qcarcam_context);
+	if (ret != QCARCAM_RET_OK)
+	{
+		printf("qcarcam_start() failed %d\n", ret);
+		goto qcarcam_thread_fail;
+	}
+	else
+	{
+		printf("qcarcam_start success \n");
+	}
+
+	if (pInputCtxt->use_event_callback)
+	{
+		while (pInputCtxt->is_running) 
+		{
+			printf("running use event callback \n ");
+			sleep (1);
+		}
+	}
+	else
+	{
+		while(pInputCtxt->is_running)
+		{
+			sleep(1);
+		}
+	}
+
+	printf("exit dms setup_input_ctxt_thread \n");
+
+qcarcam_thread_fail:
+	if (pInputCtxt->qcarcam_context)
+	{
+		qcarcam_stop(pInputCtxt->qcarcam_context);
+		qcarcam_ret_t ret = QCARCAM_RET_OK;
+		ret = qcarcam_close(pInputCtxt->qcarcam_context);
+		pInputCtxt->qcarcam_context = NULL;
+		printf("dms qcarcam_close ret=%d\n", ret);
+	}
+
+	printf("exit2  dms setup_input_ctxt_thread \n");
+	pthread_exit(nullptr);
+	return nullptr;
+}
+
+void* start_oms_capture(void *pArg)
+{
+	printf("start dms Capure \n");
+
+	int count = 0;
+	qcarcam_ret_t ret = QCARCAM_RET_OK;
+	qcarcam_test_input_t *pInputCtxt = &gOmsInput;
+
+	pInputCtxt->qcarcam_input_id = OMS_CAMERA_ID;
+	pInputCtxt->use_event_callback = 1;
+	pInputCtxt->state = 0;
+	pthread_mutex_init(&pInputCtxt->mutex_close_camera, NULL);
+
+	/*no timeout when using event callback as frame is ready as soon as we get callback*/
+	pInputCtxt->frame_timeout = pInputCtxt->use_event_callback ? 0 : QCARCAM_TEST_DEFAULT_GET_FRAME_TIMEOUT;
+	
+	pInputCtxt->buffers_param.width = OMS_CAMERA_WIDTH;
+	pInputCtxt->buffers_param.height = OMS_CAMERA_HEIGHT;
+	pInputCtxt->buffers_param.format = OMS_CAMERA_FORMAT;
+	pInputCtxt->buffers_param.n_buffers = CAMERA_NUM_BUFFERS;
+
+	pInputCtxt->p_buffers_output.n_buffers = pInputCtxt->buffers_param.n_buffers;
+	pInputCtxt->p_buffers_output.color_fmt = pInputCtxt->buffers_param.format;
+	pInputCtxt->p_buffers_output.buffers = pInputCtxt->pBuffers;
+	for (unsigned int i = 0; i < pInputCtxt->p_buffers_output.n_buffers; ++i)
+	{
+		pInputCtxt->p_buffers_output.buffers[i].n_planes = 1;
+		pInputCtxt->p_buffers_output.buffers[i].planes[0].width = pInputCtxt->buffers_param.width;
+		pInputCtxt->p_buffers_output.buffers[i].planes[0].height = pInputCtxt->buffers_param.height;
+		pInputCtxt->p_buffers_output.buffers[i].planes[0].stride = pInputCtxt->buffers_param.width * 2;
+		pInputCtxt->p_buffers_output.buffers[i].planes[0].size =
+			pInputCtxt->p_buffers_output.buffers[i].planes[0].stride * pInputCtxt->p_buffers_output.buffers[i].planes[0].height;
+		pInputCtxt->p_buffers_output.buffers[i].planes[0].p_buf = pmem_malloc_ext(
+			pInputCtxt->p_buffers_output.buffers[i].planes[0].size,
+			PMEM_CAMERA_ID,
+			PMEM_FLAGS_PHYS_NON_CONTIG,
+			PMEM_ALIGNMENT_4K);
+
+		printf("mem: %p \n", pInputCtxt->p_buffers_output.buffers[i].planes[0].p_buf);
+	}
+
+	do
+	{
+
+		printf("qcarcam_open id %d \n", pInputCtxt->qcarcam_input_id);
+		pInputCtxt->qcarcam_context = qcarcam_open(pInputCtxt->qcarcam_input_id);
+
+		if (!pInputCtxt->qcarcam_context)
+		{
+			if (count++ == 10)
+			{
+				printf("qcarcam_open() failed");
+				goto qcarcam_thread_fail;
+			}
+			printf("qcarcam_open() try again... \n");
+			// sleep(1);
+		}
+		LOG_DEBUG("\n");
+	} while (!pInputCtxt->qcarcam_context);
+LOG_DEBUG("\n");
+	printf("qcarcam_open ok ; input_desc=%d context=%p\n", pInputCtxt->qcarcam_input_id, pInputCtxt->qcarcam_context);
+	//
+
+	// use event call back
+	qcarcam_param_value_t param;
+	param.ptr_value = (void *)qcarcam_arcsoft_event_oms_cb;
+	ret = qcarcam_s_param(pInputCtxt->qcarcam_context, QCARCAM_PARAM_EVENT_CB, &param);
+
+	param.uint_value = QCARCAM_EVENT_FRAME_READY | QCARCAM_EVENT_INPUT_SIGNAL | QCARCAM_EVENT_ERROR;
+	ret = qcarcam_s_param(pInputCtxt->qcarcam_context, QCARCAM_PARAM_EVENT_MASK, &param);
+
+	ret = qcarcam_s_buffers(pInputCtxt->qcarcam_context, &pInputCtxt->p_buffers_output);
+	if (ret != QCARCAM_RET_OK)
+	{
+		printf("qcarcam_s_buffers() failed %d\n", ret);
+		goto qcarcam_thread_fail;
+	}
+
+	pInputCtxt->is_running = 1;
+
+	ret = qcarcam_start(pInputCtxt->qcarcam_context);
+	if (ret != QCARCAM_RET_OK)
+	{
+		printf("qcarcam_start() failed %d", ret);
+		goto qcarcam_thread_fail;
+	}
+	else
+	{
+		printf("qcarcam_start success \n");
+	}
+
+	if (pInputCtxt->use_event_callback)
+	{
+		while (pInputCtxt->is_running)
+		{
+			printf("running use event callback \n ");
+			sleep(1);
+		}
+	}
+	else
+	{
+		while (pInputCtxt->is_running)
+		{
+			sleep(1);
+		}
+	}
+
+	printf("exit dms setup_input_ctxt_thread \n");
+
+qcarcam_thread_fail:
+	if (pInputCtxt->qcarcam_context)
+	{
+		qcarcam_stop(pInputCtxt->qcarcam_context);
+		qcarcam_ret_t ret = QCARCAM_RET_OK;
+		ret = qcarcam_close(pInputCtxt->qcarcam_context);
+		pInputCtxt->qcarcam_context = NULL;
+		printf("dms qcarcam_close ret=%d\n", ret);
+	}
+
+	printf("exit2  dms setup_input_ctxt_thread \n");
+	pthread_exit(nullptr);
+	return nullptr;
+}
+
+
+void stop_camera_check()
+{
+	camera_check_running = 0;
+}
+
+void* thread_camera_check(void* pArg)
+{
+	 qcarcam_test_input_t* pInputCtxt = NULL;
+	 struct timeval start;
+	 struct timeval end;
+	 int msspan = 0, ret;
+	 camera_check_running = 1;
+
+     while (camera_check_running) 
+	 {
+    	 gettimeofday(&start,NULL);
+    	 usleep (50000); //
+    	 gettimeofday(&end,NULL);
+
+    	 msspan += (end.tv_sec - start.tv_sec) * 1000 +  (end.tv_usec - start.tv_usec) / 1000;
+    	 //printf ("mspan %d \n", msspan);
+
+    	 if (msspan >= 100) 
+		 { //100ms must have at least one frame
+    		 msspan = 0;
+
+    		 pInputCtxt = &gDmsInput;
+    		 if ( pInputCtxt->is_running == 1 && pInputCtxt->frameCnt == 0  && pInputCtxt->state ==0 ) 
+			 { //have locked
+    			 ret = qcarcam_stop(pInputCtxt->qcarcam_context);
+    			 if (ret == 0) 
+				 {
+    				 usleep(50000);
+    				 ret = qcarcam_start(pInputCtxt->qcarcam_context);
+    				 if (ret != 0) 
+					 {
+						 printf ("DMS error: thread_camera_check qcarcam_start fail with %d\n", ret);
+					 } 
+					 else 
+					 {
+						 printf ("DMS restart camera ok\n");
+						 pInputCtxt->state = 4;
+					 }
+    			 } 
+				 else
+				  {
+    				 usleep(10000);
+					 ret = qcarcam_start(pInputCtxt->qcarcam_context);
+					 printf ("DMS error: thread_camera_check qcarcam_stop fail with %d, then start with ret %d\n",
+							 ret,
+							 qcarcam_start(pInputCtxt->qcarcam_context));
+    			 }
+    		 } 
+			 else
+			 {
+				 pInputCtxt->frameCnt = 0;
+			 }
+    			 
+#if 1
+    		 pInputCtxt = &gOmsInput;
+			 if ( pInputCtxt->is_running == 1 && pInputCtxt->frameCnt == 0 && pInputCtxt->state ==0) 
+			 { //have locked
+				 ret = qcarcam_stop(pInputCtxt->qcarcam_context);
+				 if (ret == 0)
+				 {
+					 usleep(50000);
+					 ret = qcarcam_start(pInputCtxt->qcarcam_context);
+					 if (ret != 0) 
+					 {
+						 printf ("OMS error: thread_camera_check qcarcam_start fail with %d\n", ret);
+					 } 
+					 else 
+					 {
+						 printf ("OMS restart camera ok\n");
+						 pInputCtxt->state = 4;
+					 }
+				 }
+				  else 
+				  {
+					 usleep(10000);
+					 ret = qcarcam_start(pInputCtxt->qcarcam_context);
+					 printf ("OMS error: thread_camera_check qcarcam_stop fail with %d, then start with ret %d\n",
+							 ret,
+							 qcarcam_start(pInputCtxt->qcarcam_context));
+				 }
+			 } 
+			 else
+			 {
+				 pInputCtxt->frameCnt = 0;
+			 }
+    			 
+#endif
+    	 }
+     }
+
+ 	printf("thread_camera_check exit \n");
+ 	pthread_exit(NULL);
+ 	return NULL;
+}

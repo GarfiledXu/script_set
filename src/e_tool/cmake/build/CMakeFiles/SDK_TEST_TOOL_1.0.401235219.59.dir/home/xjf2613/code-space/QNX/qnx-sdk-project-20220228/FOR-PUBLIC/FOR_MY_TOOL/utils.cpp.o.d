@@ -1,0 +1,23 @@
+CMakeFiles/SDK_TEST_TOOL_1.0.401235219.59.dir/home/xjf2613/code-space/QNX/qnx-sdk-project-20220228/FOR-PUBLIC/FOR_MY_TOOL/utils.cpp.o: \
+ /home/xjf2613/code-space/QNX/qnx-sdk-project-20220228/FOR-PUBLIC/FOR_MY_TOOL/utils.cpp \
+ /home/xjf2613/code-space/QNX/qnx-sdk-project-20220228/FOR-PUBLIC/FOR_MY_TOOL/utils.h \
+ /home/xjf2613/code-space/QNX/qnx-sdk-project-20220228/pe-hezhong_ep40/m_sdk/inc/amcomdef.h \
+ /home/xjf2613/code-space/QNX/qnx-sdk-project-20220228/pe-hezhong_ep40/m_sdk/inc/asvloffscreen.h \
+ /home/xjf2613/code-space/QNX/qnx-sdk-project-20220228/pe-hezhong_ep40/m_sdk/inc/amcomdef.h \
+ /home/xjf2613/code-space/QNX/qnx-sdk-project-20220228/FOR-PUBLIC/FOR_QNX_SDP/qnx700_sdp/target/qnx7/usr/include/stdio.h \
+ /home/xjf2613/code-space/QNX/qnx-sdk-project-20220228/FOR-PUBLIC/FOR_QNX_SDP/qnx700_sdp/target/qnx7/usr/include/sys/platform.h \
+ /home/xjf2613/code-space/QNX/qnx-sdk-project-20220228/FOR-PUBLIC/FOR_QNX_SDP/qnx700_sdp/target/qnx7/usr/include/sys/compiler_gnu.h \
+ /home/xjf2613/code-space/QNX/qnx-sdk-project-20220228/FOR-PUBLIC/FOR_QNX_SDP/qnx700_sdp/target/qnx7/usr/include/sys/cdefs.h \
+ /home/xjf2613/code-space/QNX/qnx-sdk-project-20220228/FOR-PUBLIC/FOR_QNX_SDP/qnx700_sdp/target/qnx7/usr/include/aarch64/platform.h \
+ /home/xjf2613/code-space/QNX/qnx-sdk-project-20220228/FOR-PUBLIC/FOR_QNX_SDP/qnx700_sdp/target/qnx7/usr/include/_pack64.h \
+ /home/xjf2613/code-space/QNX/qnx-sdk-project-20220228/FOR-PUBLIC/FOR_QNX_SDP/qnx700_sdp/target/qnx7/usr/include/sys/target_nto.h \
+ /home/xjf2613/code-space/QNX/qnx-sdk-project-20220228/FOR-PUBLIC/FOR_QNX_SDP/qnx700_sdp/target/qnx7/usr/include/_packpop.h \
+ /home/xjf2613/code-space/QNX/qnx-sdk-project-20220228/FOR-PUBLIC/FOR_QNX_SDP/qnx700_sdp/target/qnx7/usr/include/yvals.h \
+ /home/xjf2613/code-space/QNX/qnx-sdk-project-20220228/FOR-PUBLIC/FOR_QNX_SDP/qnx700_sdp/target/qnx7/usr/include/stdlib.h \
+ /home/xjf2613/code-space/QNX/qnx-sdk-project-20220228/FOR-PUBLIC/FOR_QNX_SDP/qnx700_sdp/target/qnx7/usr/include/malloc.h \
+ /home/xjf2613/code-space/QNX/qnx-sdk-project-20220228/FOR-PUBLIC/FOR_QNX_SDP/qnx700_sdp/target/qnx7/usr/include/alloca.h \
+ /home/xjf2613/code-space/QNX/qnx-sdk-project-20220228/FOR-PUBLIC/FOR_QNX_SDP/qnx700_sdp/target/qnx7/usr/include/sys/wait.h \
+ /home/xjf2613/code-space/QNX/qnx-sdk-project-20220228/FOR-PUBLIC/FOR_QNX_SDP/qnx700_sdp/target/qnx7/usr/include/signal.h \
+ /home/xjf2613/code-space/QNX/qnx-sdk-project-20220228/FOR-PUBLIC/FOR_QNX_SDP/qnx700_sdp/target/qnx7/usr/include/sys/siginfo.h \
+ /home/xjf2613/code-space/QNX/qnx-sdk-project-20220228/FOR-PUBLIC/FOR_QNX_SDP/qnx700_sdp/target/qnx7/usr/include/string.h \
+ /home/xjf2613/code-space/QNX/qnx-sdk-project-20220228/FOR-PUBLIC/FOR_QNX_SDP/qnx700_sdp/target/qnx7/usr/include/strings.h
