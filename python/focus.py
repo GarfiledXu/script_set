@@ -43,49 +43,23 @@ g_logger_path=os.path.dirname(g_cur_py_abpath)
 
 #python 递归遍历文件
 
-# 
+
+
+
 def display_sys():
     jf_log.t("system type:"+platform.system())
-
-#判断文件是否存在
-#判断文件夹是否存在
-
-#loguru
-#[level][num:func][filename]
-#jflog_i
-#jflog_e
-#jflog_d
-#jflog_t
-#jflog_w
-# class MyLogger:
-    # def __init__(self, log_file_path="cur.log"):
-    #     self.jf_log = jf_log
-    #     # 清空所有设置
-    #     self.jf_log.remove()
-    #     # 添加控制台输出的格式,sys.stdout为输出到屏幕;关于这些配置还需要自定义请移步官网查看相关参数说明
-    #     self.jf_log.add(sys.stdout,
-    #                     format="<green>{time:YYYYMMDD HH:mm:ss}</green> | "  # 颜色>时间
-    #                            "{process.name} | "  # 进程名
-    #                            "{thread.name} | "  # 进程名
-    #                            "<cyan>{module}</cyan>.<cyan>{function}</cyan>"  # 模块名.方法名
-    #                            ":<cyan>{line}</cyan> | "  # 行号
-    #                            "<level>{level}</level>: "  # 等级
-    #                            "<level>{message}</level>",  # 日志内容
-    #                     )
-    #     # 输出到文件的格式,注释下面的add',则关闭日志写入
-    #     self.jf_log.add(log_file_path, level='d',
-    #                     format='{time:YYYYMMDD HH:mm:ss} - '  # 时间
-    #                            "{process.name} | "  # 进程名
-    #                            "{thread.name} | "  # 进程名
-    #                            '{module}.{function}:{line} - {level} -{message}',  # 模块名.方法名:行号
-    #                     rotation="10 MB")
 
 
 def main_launch():
     display_sys()
+    jf_file.update_root_dir(r'D:\CODE_SAPCE_WIN\script_center\python\qt_prj_dir_template_win\project_root', r'D:\CODE_SAPCE_WIN\script_center\test')
+    
+    
 if __name__ == "__main__":
     main_launch()
     # jf_file.update_root_dir(r'D:\CODE_SAPCE_WIN\script_center\python\qt_prj_dir_template_win\project_root', r'D:\CODE_SAPCE_WIN\script_center\test')
     #linux test
     jf_file.update_root_dir(r'/home/fei/CodeSpaceWsl/script_set/python/qt_prj_dir_template_win/project_root', r'/home/fei/CodeSpaceWsl/script_set/test')
+    
+
     
