@@ -85,6 +85,7 @@ def main_launch():
     display_sys()
 if __name__ == "__main__":
     main_launch()
-    jf_file.update_root_dir(r'D:\CODE_SAPCE_WIN\script_center\python\qt_prj_dir_template_win\project_root', r'D:\CODE_SAPCE_WIN\script_center\test')
-
+    # jf_file.update_root_dir(r'D:\CODE_SAPCE_WIN\script_center\python\qt_prj_dir_template_win\project_root', r'D:\CODE_SAPCE_WIN\script_center\test')
+    #linux test
+    jf_file.update_root_dir(r'/home/fei/CodeSpaceWsl/script_set/python/qt_prj_dir_template_win/project_root', r'/home/fei/CodeSpaceWsl/script_set/test')
     
