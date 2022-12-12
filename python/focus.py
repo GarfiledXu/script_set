@@ -45,19 +45,65 @@ g_logger_path=os.path.dirname(g_cur_py_abpath)
 
 
 
+#装饰器编码基本思路
+#不管装饰器本身要不要带参数，最终的效果都是，装饰器函数需要返回一个接受目标被包装函数为参数的函数
+#即decorator(input_func)，在装饰器带参数的场景下，第一层形参为装饰器自用函数，第二层函数形参就该为decorator(input_func)
+#函数形式，如此在内层嵌套的函数依次回溯到最外层时，最终返回的函数对象格式就是decorator(input_func)
+#需要包装目标函数参数，就定义一层嵌套函数，将新定义的函数形参作为生成参数传入
+def decorator_test(decorator_tag):
+    def decorator_out(in_func):
+        def decorator_imp(*args, **kw):
+            print("behind run, tag:" + decorator_tag)
+            return in_func(*args, **kw)
+        return decorator_imp
+    return decorator_out
 
+
+def decorator_test2():
+    def decorator_in(input_func):
+        def decorator_imp(*args, **kw):
+            print("behind run")
+            return input_func(*args, **kw)
+        return decorator_imp
+    return decorator_in
+
+def decorator_test3(input_func):
+    def func_pkg_args(*args, ** kw):
+        print("behind run")
+        return input_func(*args, ** kw)
+    return func_pkg_args
+
+def decorator_test4(second_input):
+#  test_variable_parameter=decorator_test(in_func, tag)
+@decorator_test("hello-tag")
+def test_variable_parameter(*args, **kw)->None:
+    jf_log.i(args)
+    jf_log.i(kw)
+    
+@decorator_test2()
+def test_variable_parameter2(*args, **kw)->None:
+    jf_log.i(args)
+    jf_log.i(kw)
+
+@decorator_test3
+def test_variable_parameter_3(*args, **kw)->None:
+    jf_log.i(args)
+    jf_log.i(kw)
+# def cmake_cfg():
 def display_sys():
     jf_log.t("system type:"+platform.system())
 
 
 def main_launch():
     display_sys()
-    
+    test_variable_parameter("param1", 4, "param3", xjf=2323, dfjdkf="df")
+    test_variable_parameter2("param1", 4, "param3", xjf=2323, dfjdkf="df")
+    test_variable_parameter_3("param1", 4, "param3", xjf=2323, dfjdkf="df")
 if __name__ == "__main__":
     main_launch()
     #linux test
-    jf_file.update_root_dir(r'/home/fei/CodeSpaceWsl/script_set/python/qt_prj_dir_template_win/project_root', r'/home/fei/CodeSpaceWsl/script_set/test')
-    jf_file.update_root_dir(r'D:\CODE_SAPCE_WIN\script_center\python\qt_prj_dir_template_win\project_root', r'D:\CODE_SAPCE_WIN\script_center\test')
+    # jf_file.update_root_dir(r'/home/fei/CodeSpaceWsl/script_set/python/qt_prj_dir_template_win/project_root', r'/home/fei/CodeSpaceWsl/script_set/test')
+    # jf_file.update_root_dir(r'D:\CODE_SAPCE_WIN\script_center\python\qt_prj_dir_template_win\project_root', r'D:\CODE_SAPCE_WIN\script_center\test')
     
 
     
