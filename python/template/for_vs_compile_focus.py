@@ -38,7 +38,7 @@ cmake_script_center_dir=r"D:\VS2019\repos\PUBLICRELY\script_set\cmake"
 cmake_build_dir=r"D:\VS2019\repos\pe-face_auto_calib\build\x64_release"
 cmake_build_exe_out_dir=r"D:\VS2019\repos\pe-face_auto_calib\out\bin\x64_release"
 cmake_src_dir=r"D:\VS2019\repos\pe-face_auto_calib"
-cmake_tool_chain="--toolchain={path}".format(path="")
+cmake_tool_chain=""
 
 def start_cmake_clean():
     jf_log.i("start_cmake_clean")
@@ -47,7 +47,8 @@ def start_cmake_clean():
     
 def start_cmake_generate()->None:
     jf_log.i("start_cmake_generate ")
-    cmd_str="cmake -S={src_dir} -B={generator_build_dir} {tool_chain} -DEXECUTABLE_OUTPUT_PATH={exe_out_dir}".format(tool_chain="", src_dir=cmake_src_dir, generator_build_dir=cmake_build_dir, exe_out_dir=cmake_build_exe_out_dir)
+    cmd_str="cmake -S={src_dir} -B={generator_build_dir}  -DEXECUTABLE_OUTPUT_PATH={exe_out_dir}".format(src_dir=cmake_src_dir, generator_build_dir=cmake_build_dir, exe_out_dir=cmake_build_exe_out_dir)
+    cmd_tool_chain="--toolchain={path}".format(cmake_tool_chain)
     cmd_exe_name=" -Dexe_name={name} ".format(name="FAEC_TOOL")
     jf_log.t(cmd_str+cmd_exe_name)
     run_cmd_and_print(cmd_str+cmd_exe_name)
@@ -57,7 +58,7 @@ def start_cmake_generate()->None:
 def start_cmake_build()->None:
     jf_log.i("start_cmake_build ")
     cmd_str="cmake --build {build_dir} --config {build_type}".format(build_dir=cmake_build_dir, build_type=cmake_build_type)
-    # run_cmd_and_print(cmd_str)
+    run_cmd_and_print(cmd_str)
     jf_log.t(cmd_str)
     os.system("pause")
     jf_log.i("end_cmake_generate ")
