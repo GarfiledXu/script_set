@@ -5,6 +5,7 @@ import platform
 import os
 import shutil
 import re
+import subprocess
 from jf_log import jf_log
 
 
@@ -40,10 +41,22 @@ def update_template_dir(src_root_path, dst_root_path):
             if not os.path.isfile(dst_path):
                 shutil.copyfile(os.path.join(root, f), dst_path)
                 
+def clean_all_under_dir(dst_dir):
+    for root, dirs, files in os.walk(dst_dir, topdown=False):
+        for name in files:
+            os.remove(os.path.join(root, name))
+        for name in dirs:
+            os.rmdir(os.path.join(root, name))
+            
+def run_cmd_and_print(dst_str):
+    res = subprocess.Popen(dst_str)
+    # print("", res.stdout.read()) 
 class jf_file_:
     def __init__(self)->None:
         jf_file_.version="0.1"
     def update_root_dir(self, src_root_path, dst_root_path)->None:
         update_template_dir(src_root_path, dst_root_path)
+    def clean_all_under_dir(self, dst_dir)->None:
+        clean_all_under_dir(dst_dir)
 
 jf_file = jf_file_()

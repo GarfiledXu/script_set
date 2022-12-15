@@ -40,7 +40,7 @@ macro(define_colors)
 endmacro()
 define_colors()
 
-set(color_cmake /home/xjf2613/code-space/QNX/qnx-sdk-project-20220228/pe-hezhong_ep40/script/cmake/color.cmake CACHE STRING "xxx")
+set(color_cmake ${cmake_center}/color.cmake CACHE STRING "xxx")
 #需要加上参数判断
 function(log_d agv)
 include(${color_cmake})
