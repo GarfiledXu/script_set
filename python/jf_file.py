@@ -50,6 +50,7 @@ def clean_all_under_dir(dst_dir):
             
 def run_cmd_and_print(dst_str):
     res = subprocess.Popen(dst_str)
+    res.wait()
     # print("", res.stdout.read()) 
 class jf_file_:
     def __init__(self)->None:
