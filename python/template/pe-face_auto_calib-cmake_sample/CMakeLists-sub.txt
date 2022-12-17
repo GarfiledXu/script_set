@@ -1,0 +1,26 @@
+
+CMAKE_MINIMUM_REQUIRED(VERSION 3.4.2)
+ADD_DEFINITIONS(-std=c++11)
+PROJECT(${exe_name})
+include(${cmake_center}/color.cmake)
+include(${cmake_center}/module.cmake)
+SET(CURRENT_PROJECT_PATH ${CMAKE_CURRENT_SOURCE_DIR})
+FILE(GLOB SUB_MYSDK_SRC_LIST ${CURRENT_PROJECT_PATH}/*.cpp)
+
+SET(LIB_DIR ${CURRENT_PROJECT_PATH}/lib/x86_debug)
+generate_module("arc_alg" 
+    SP_INC 
+        ${CURRENT_PROJECT_PATH}/inc
+    SP_LIB 
+    ${LIB_DIR}/mpbase.lib
+    ${LIB_DIR}/arcnn.lib
+    ${LIB_DIR}/arcsoft_faceattribution_estimation.lib
+    # ${LIB_DIR}/arcsoft_facequality_multiattribute.lib
+    ${LIB_DIR}/ArcSoft_FaceQualityMultiAttribute.lib
+    ${LIB_DIR}/arcsoft_landmark_tracking.lib
+    
+    SP_SRC 
+        ${SUB_MYSDK_SRC_LIST})
+
+# print_module(internal)
+
