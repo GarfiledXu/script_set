@@ -7,8 +7,19 @@
 			"path": "../../"
 		},
 		{
-			"path":"../../../"
+			"path": "../../../"
+		},
+		{
+			"path": "../../PUBLICRELY"
 		}
 	],
-	"settings": {}
+	"settings": {
+		"files.associations": {
+			"*.json": "json",
+			"CMakeLists.txt": "cmake",
+			"chrono": "cpp",
+			"filesystem": "cpp",
+			"fstream": "cpp"
+		}
+	}
 }
