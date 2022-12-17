@@ -7,86 +7,224 @@ import os
 import shutil
 import re
 import subprocess
-from this import d
-
+from abc import ABCMeta, abstractmethod
+import copy
 
 script_center_dir=r"D:\VS2019\repos\PUBLICRELY\script_set\python"
 script_indep_dir=r"D:\VS2019\repos\pe-face_auto_calib\script\python"
-cur_script_dir=script_center_dir;
-sys.path.insert(0, cur_script_dir);
+sys.path.insert(0, script_center_dir)
+
 from jf_log import jf_log
 from jf_file import *
 
+#feature:
+#multi structure
+#modify convenient
+#modify separately
+#handler could be modify repeatedly
+#reference git abstruct concept
 
-def start_cmake_clean(input_path):
-    jf_log.i("start_cmake_clean")
-    jf_file.clean_all_under_dir(input_path)
-    jf_log.i("end clean build dir:%s" %input_path)
+#implement thought
+#instance one jf_cmake obj correspond to once build
+#using dict as handler to store all of generator and build information
+#provide method to operator dict handler for  rapid reuse and modification
+#could establish some manager method to manage or feedback procedure for all of build life cycle
+
+
+#new thought
+#add modify run
+#copy 
+
+#pseudo use
+#jf_cmake cb_1()
+# 
+class jf_cmake_base(metaclass=ABCMeta):
+    pname="this is an abstract class for jf_cmake"
     
-def logic_filter():
-    pass
+    @abstractmethod
+    def generator(self):
+        pass
+    
+    @abstractmethod
+    def build(self):
+        pass
+    
+    @abstractmethod
+    def clear_all_rule(self):
+        pass
 
-def dict_parser():
-    pass
-
-#自定义cmake变量规则的映射
-def getting_cmake_var(**kw):
-    dict_new=dict()
-    for k, v in kw.items():
-        dict_new[k]=" -D{key}={value} ".format(key=k,value=v)
-    return dict_new
-
-def get_var_name(variable):
-    globals_dict = globals()
-    return [var_name for var_name in globals_dict if globals_dict[var_name] is variable]
-
-def to_CRG(*args):
-    out_str=str()
-    for item in args:
-        out_str=out_str +" "+ str(item) + " "
-    return out_str
+    
+class jf_cmake(object):
+    rule_ge=dict()
+    rule_bu=dict()
+    
+    dict_gene=dict()
+    dict_gene_c=dict()
+    dict_build=dict()
+    dict_build_c=dict()
+    dict_gene_set_default=dict()
+    dict_build_set_default=dict()
+    
+    def __init__(self, input_CRG, input_CRB) -> None:
+        super().__init__()
+        self.rule_ge=copy.deepcopy(input_CRG)
+        self.rule_bu=copy.deepcopy(input_CRB)
+        
+    def get_var_name(self, variable):
+        globals_dict = globals()
+        return [var_name for var_name in globals_dict if globals_dict[var_name] is variable]
+    
+    def add_gene(self, **kw):
+        cur_dict=self.dict_gene
+        cur_dict.update(kw)
+        jf_log.d("add dict:")
+        for k,v in cur_dict.items():
+            jf_log.d("[{key}]:[{value}]".format(key=k, value=v))
+    def add_gene_custom(self, **kw):
+        cur_dict=self.dict_gene_c
+        cur_dict.update(kw)
+        jf_log.d("add dict:")
+        for k,v in cur_dict.items():
+            jf_log.d("[{key}]:[{value}]".format(key=k, value=v))
+    def add_build(self, **kw):
+        cur_dict=self.dict_build
+        cur_dict.update(kw)
+        jf_log.d("add dict:")
+        for k,v in cur_dict.items():
+            jf_log.d("[{key}]:[{value}]".format(key=k, value=v))
+    def add_build_custom(self, **kw):
+        cur_dict=self.dict_build_c
+        cur_dict.update(kw)
+        jf_log.d("add dict:")
+        for k,v in cur_dict.items():
+            jf_log.d("[{key}]:[{value}]".format(key=k, value=v))
             
-def to_CR(CR, **kw):
-    out_str=str()
-    for k,v in kw.items():
-        out_str+=" "+str(CR.get(str(k)).get(str(v))) + " "
-    return out_str
-def set_CR_default(CR, CR_key, default_value):
-    str_pre=str()
-    str_suf=str()
-    str_default=str()
-    if not CR_key in CR.keys():
-        jf_log.e("no key:{key}".format(key=CR_key))
-    if not "default" in CR[CR_key].keys():
-        jf_log.e("no key:default")
-    if "prefix" in CR[CR_key].keys():
-        str_pre=str(CR[CR_key]["prefix"])
-    if "suffix" in CR[CR_key].keys():
-        str_suf=str(CR[CR_key]["suffix"])
-    str_default =" " + str_pre + default_value + str_suf + " "
-    CR[CR_key]["default"]=str_default
-    jf_log.i("set CR:{CR}[{key}]={value}".format(CR=get_var_name(CR), key=CR_key, value=str_default))
-    return default_value
+    def set_gene_default(self, **item):
+        self.dict_gene_set_default=item
+    def set_build_default(self, **item):
+        self.dict_build_set_default=item
+        
+    def del_gene(self):
+        self.dict_gene=dict()
+    def del_gene_custom(self):
+        self.dict_gene_c=dict()
+    def del_build(self):
+        self.dict_build=dict()
+    def del_build_custom(self):
+        self.dict_gene_c=dict()
+    def del_gene_set_default(self):
+        self.dict_gene_set_default=dict()
+    def del_build_set_default(self):
+        self.dict_build_set_default=dict()
 
-def set_CR_cmake_var(CR, **kw):
-    for k,v in kw.items():
-        CR["custom_add"]["add"]+=" -D{key}={value} ".format(key=str(k),value=str(v))
+    def start_impl(self, CR, dict_tag, dict_tag_c, dict_tag_set):
+        ru=CR
+        dict_gene=dict_tag
+        dict_gene_set_default=dict_tag_set
+        list_gene=list()
+        list_gene_custom=list()
+        jf_log.d("{dict_name}{value}".format(dict_name="dict_gene", value=dict_gene))
+        jf_log.d("{dict_name}{value}".format(dict_name="dict_gene_set_default", value=dict_gene_set_default))
+        for k,v in dict_gene.items():
+            if str(v) == "default":
+                for ke,va in dict_gene_set_default.items():
+                    if str(ke) == str(k):
+                        str1= str(ru[k]["prefix"]) + va + str(ru[k]["suffix"]) + " "
+                        list_gene.append(str1)
+                        jf_log.d("list_gene add default:{str}".format(str=str1))
+            else:
+                if not str(k) in ru:
+                    jf_log.e("error! no key:{Key}, of dict:{dict}".format(Key=k, dict=ru))
+                elif not str(v) in ru[str(k)]:
+                    jf_log.e("error! no key:{Key}, of dict:{dict}".format(Key=v, dict=ru[str(k)]))
+                else:
+                    list_gene.append(str(ru[k][v]))
+                    jf_log.d("list_gene add form:{str}".format(str=str(ru[k][v])) )
+        dict_gene_c=dict_tag_c
+        for k,v in dict_gene_c.items():
+            list_gene_custom.append("-D{key}={value}".format(key=str(k),value=str(v)))
+        for it in list_gene:
+            jf_log.d("list_build:{value}".format(value=it))
+        for it in list_gene_custom:
+            jf_log.d("list_gene_custom:{value}".format(value=it))
+        list_all=list_gene+list_gene_custom
+        str_all="cmake "
+        jf_log.t("run cmd:list")
+        for it in list(set(list_all)):
+            str_all+=" "+it+" "
+            jf_log.i(it)
+        str_all = re.sub(r' +', ' ', str_all)
+        jf_log.t("run cmd str:{str}".format(str=str_all))
+        run_cmd_and_print(str_all)
+    def start_generator(self):
+        self.start_impl(self.rule_ge, self.dict_gene, self.dict_gene_c, self.dict_gene_set_default)
+        
+    def start_build(self):
+        self.start_impl(self.rule_bu, self.dict_build, self.dict_build_c, self.dict_build_set_default)
 
-def generator_CR(CR, **kw):
-    internal_str=str()
-    for k,v in kw.items():
-        internal_str+=" "+str(CR.get(str(k)).get(str(v))) + " "
-    cmd="cmake " +  internal_str + " " + str(CR["custom_add"]["add"])
-    CR["final_cmd"]=cmd
-    return cmd
-
-def run_CR(CR):
-    cmd_key="final_cmd"
-    if not   cmd_key   in CR:
-        jf_log.e("error! no key {key}, in CR:{CR}".format(key=cmd_key,CR=get_var_name(CR)))
-    else:
-        run_cmd_and_print(CR[cmd_key])
-
+    def start_clean(self, *dir_key):
+        dir_key=list(set(dir_key))
+        #parse store dict
+        dict_gene=self.dict_gene
+        dict_gene_c=self.dict_gene
+        dict_build=self.dict_gene
+        dict_build_c=self.dict_gene
+        dict_gene_set_default=self.dict_gene_set_default
+        dict_build_set_default=self.dict_build_set_default
+        list_all_dir=[dict_gene, dict_gene_c, dict_build, dict_build_c, dict_gene_set_default, dict_build_set_default]
+        list_pending=list()
+        serial=int()
+        for list_t in list_all_dir:
+            for k,v in list_t.items():
+                for dst_key in dir_key:
+                    if k==dst_key and v != "default":
+                        serial=serial+1
+                        list_pending.append(v)
+                        jf_log.d("add clean item:[{sei},{key}]:[{value}]".format(sei=serial, key=str(k), value=v))
+        list_pending=list(set(list_pending))
+        for clean in list_pending:
+            jf_log.i("start_cmake_clean")
+            jf_file.clean_all_under_dir(clean)
+            jf_log.i("end clean build dir:%s" %clean)
+    def print(self):
+        pass
+def test_main():
+    # jf_cmake make1(CRG, CRB)
+    make1=jf_cmake(CRG, CRB)
+    make1.add_gene(
+        is_vs="2019", 
+        arch="win32",
+        #build_type="d", 
+        toolchain="null",
+        src_dir="default",
+        build_dir="default",
+        exe_out_dir="default",
+    )
+    make1.set_gene_default(
+        src_dir=r"D:\VS2019\repos\pe-face_auto_calib",
+        build_dir=r"D:\VS2019\repos\pe-face_auto_calib\build",
+        exe_out_dir=r"D:\VS2019\repos\pe-face_auto_calib\out\bin",
+    )
+    make1.add_gene_custom(
+        build_dir=r"D:\VS2019\repos\pe-face_auto_calib\build",
+        exe_name="FACE_TOOO",
+        cmake_center=r"D:\VS2019\repos\PUBLICRELY\script_set\cmake"
+    )
+    make1.add_build(
+        build_dir="default",
+        build_type="d",
+    )
+    make1.add_build_custom(
+        
+    )
+    make1.set_build_default(
+        build_dir=""r"D:\VS2019\repos\pe-face_auto_calib\build",
+    )
+    make1.start_clean("build_dir")
+    make1.start_generator()
+    make1.start_build()
+    
+    jf_log.t("end of main")
 
 
 CRG=dict(
@@ -98,8 +236,8 @@ CRG=dict(
         "default":"",
     },
     build_type={
-        "d":getting_cmake_var(CMAKE_BUILD_TYPE="Debug")["CMAKE_BUILD_TYPE"],
-        "r":getting_cmake_var(CMAKE_BUILD_TYPE="Realse")["CMAKE_BUILD_TYPE"],
+        "d":"-DCMAKE_BUILD_TYPE=Debug",
+        "r":"-DCMAKE_BUILD_TYPE=Realse",
         "default":"",
         "null":"",
     },
@@ -131,13 +269,6 @@ CRG=dict(
         "prefix":"-DEXECUTABLE_OUTPUT_PATH=",
         "suffix":" ",
     },
-    custom_add={
-        "null":"",
-        "add":"",
-    },
-    final_cmd={
-        "str":""
-    }
 )
 
 CRB=dict(
@@ -153,49 +284,8 @@ CRB=dict(
         "prefix":"--build ",
         "suffix":""
     },
-    custom_add={
-        "null":"",
-        "add":"",
-    },
-    final_cmd={
-        "str":""
-    }
-  
 )
 
-def jf_main():
-    set_CR_default(CRG, "src_dir",  r"D:\VS2019\repos\pe-face_auto_calib")
-    str_build_dir = set_CR_default(CRG, "build_dir", r"D:\VS2019\repos\pe-face_auto_calib\build")
-    set_CR_default(CRG, "exe_out_dir", r"D:\VS2019\repos\pe-face_auto_calib\out\bin")
-    set_CR_default(CRB, "build_dir", r"D:\VS2019\repos\pe-face_auto_calib\build")
-    
-    set_CR_cmake_var(CRG, 
-                    #  sys_name="windows", 
-                    build_dir=str_build_dir,
-                     exe_name="FACE_TOOO",
-                     cmake_center=r"D:\VS2019\repos\PUBLICRELY\script_set\cmake"
-                     )
-    str_generator=generator_CR(CRG, 
-               is_vs="2019", 
-               arch="win32",
-            #    build_type="d", 
-               toolchain="null",
-               src_dir="default",
-               build_dir="default",
-               exe_out_dir="default",
-               custom_add="add"
-               )
-    str_build=generator_CR(CRB,
-                build_dir="default",
-                build_type="d",
-                custom_add="add"
-                )
-    
-    jf_log.t("will run cmd:{cmd}".format(cmd=str_generator))
-    start_cmake_clean(str_build_dir)
-    run_CR(CRG)
-    jf_log.t("will run cmd:{cmd}".format(cmd=str_build))
-    run_CR(CRB)
     
 if __name__=="__main__":
-    jf_main()
+    test_main()
